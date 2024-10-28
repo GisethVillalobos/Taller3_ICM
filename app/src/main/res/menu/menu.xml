@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    >
+
+    <item
+        android:id="@+id/menuAvailable"
+        android:icon="@drawable/baseline_event_24"
+        android:title="Marcar disp/desc"
+        app:showAsAction="ifRoom"
+
+        />
+
+    <item
+        android:id="@+id/menuPeople"
+        android:icon="@drawable/baseline_people_24"
+        android:title="Usuarios disponibles"
+        app:showAsAction="ifRoom"
+        />
+
+    <item
+        android:id="@+id/menuLogOut"
+        android:icon="@drawable/baseline_logout_24"
+        android:title="Cerrar sesión"
+        app:showAsAction="ifRoom"
+
+        />
+</menu>

@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Taller3</string>
+    <string name="title">Taller 3 Full Dev</string>
+    <string name="username">Usuario</string>
+    <string name="password">Contraseña</string>
+    <string name="logIn">Iniciar Sesión</string>
+    <string name="register">Regístrate</string>
+</resources>
