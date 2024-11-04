@@ -1,6 +1,8 @@
 package com.example.taller3
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -8,11 +10,16 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class Register : AppCompatActivity() {
 
     companion object {
+        private const val CAMERA_PERMISSION_CODE = 100
+        private const val STORAGE_PERMISSION_CODE = 101
         private const val IMAGE_PICK_CODE = 1000
     }
 
@@ -41,11 +48,26 @@ class Register : AppCompatActivity() {
         buttonSubmit = findViewById(R.id.buttonSubmit)
 
         buttonSelectImage.setOnClickListener {
-            selectImage()
+            checkPermissionsAndSelectImage()
         }
 
         buttonSubmit.setOnClickListener {
             submitForm()
+        }
+    }
+
+    private fun checkPermissionsAndSelectImage() {
+        val cameraPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+        val storagePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+
+        if (cameraPermission != PackageManager.PERMISSION_GRANTED || storagePermission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE),
+                STORAGE_PERMISSION_CODE
+            )
+        } else {
+            selectImage()
         }
     }
 
@@ -54,12 +76,27 @@ class Register : AppCompatActivity() {
         startActivityForResult(intent, IMAGE_PICK_CODE)
     }
 
-    @Deprecated("deprecated")
+    @Deprecated("Deprecated")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == IMAGE_PICK_CODE && resultCode == RESULT_OK && data != null) {
             selectedImageUri = data.data
             imageViewContact.setImageURI(selectedImageUri)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == STORAGE_PERMISSION_CODE) {
+            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                selectImage()
+            } else {
+                Toast.makeText(this, "Permisos de cámara y almacenamiento denegados", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -75,7 +112,7 @@ class Register : AppCompatActivity() {
             return
         }
 
-        // Handle form submission logic here
+        // Lógica para manejar el registro de usuario aquí
         Toast.makeText(this, "Usuario registrado", Toast.LENGTH_SHORT).show()
         val intent = Intent(this, LogIn::class.java)
         startActivity(intent)
