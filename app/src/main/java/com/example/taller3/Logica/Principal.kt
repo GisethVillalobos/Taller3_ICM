@@ -1,4 +1,4 @@
-package com.example.taller3
+package com.example.taller3.Logica
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -17,8 +17,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.taller3.Datos.Location
+import com.example.taller3.R
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import org.osmdroid.api.IMapController
@@ -29,6 +34,9 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
 class Principal : AppCompatActivity() {
+
+    private lateinit var auth: FirebaseAuth
+
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
     private lateinit var osmMap: MapView
     private var myLocation = GeoPoint(0.0, 0.0)
@@ -55,6 +63,12 @@ class Principal : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_principal)
 
+        // Firebase
+        auth = Firebase.auth
+
+        // Initialize location client
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
         val toolbar: Toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
 
@@ -64,9 +78,6 @@ class Principal : AppCompatActivity() {
 
         // Location permissions
         requestLocationPermissions()
-
-        // Initialize location client
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
     }
 
     override fun onResume() {
@@ -82,7 +93,17 @@ class Principal : AppCompatActivity() {
         osmMap.onPause()
     }
 
-        override fun onCreateOptionsMenu(menu: Menu): Boolean {
+    override fun onBackPressed() {
+        // Sign out the user
+        FirebaseAuth.getInstance().signOut()
+        Toast.makeText(this, "Ha cerrado su sesión", Toast.LENGTH_SHORT).show()
+
+        // Call the default back button behavior (finish the activity)
+        super.onBackPressed()
+    }
+
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
         val inflater: MenuInflater = menuInflater
         inflater.inflate(R.menu.menu, menu)
         return true
@@ -91,7 +112,7 @@ class Principal : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.menuLogOut -> {
-                // auth.signOut()
+                auth.signOut()
                 val intent = Intent(this, LogIn::class.java)
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 startActivity(intent)

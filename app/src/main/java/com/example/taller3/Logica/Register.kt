@@ -1,19 +1,30 @@
-package com.example.taller3
+package com.example.taller3.Logica
 
 import android.Manifest
+import android.content.ContentValues.TAG
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.taller3.R
+import com.google.android.gms.tasks.OnFailureListener
+import com.google.android.gms.tasks.OnSuccessListener
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.UploadTask
+import java.io.File
 
 class Register : AppCompatActivity() {
 
@@ -22,6 +33,8 @@ class Register : AppCompatActivity() {
         private const val STORAGE_PERMISSION_CODE = 101
         private const val IMAGE_PICK_CODE = 1000
     }
+
+    private lateinit var auth: FirebaseAuth
 
     private lateinit var editTextName: EditText
     private lateinit var editTextLastName: EditText
@@ -37,6 +50,8 @@ class Register : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register)
+
+        auth = Firebase.auth
 
         editTextName = findViewById(R.id.editTextName)
         editTextLastName = findViewById(R.id.editTextLastName)
@@ -113,8 +128,58 @@ class Register : AppCompatActivity() {
         }
 
         // Lógica para manejar el registro de usuario aquí
+        registerUser(name, lastName, email, password, identification)
+
         Toast.makeText(this, "Usuario registrado", Toast.LENGTH_SHORT).show()
         val intent = Intent(this, LogIn::class.java)
         startActivity(intent)
+    }
+
+    private fun registerUser(name: String,
+                             lastName: String,
+                             email: String,
+                             password: String,
+                             identification: String) {
+
+        val latitude: Double = 0.0
+        val longitude: Double = 0.0
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    Log.d(TAG, "createUserWithEmail:onComplete:" + task.isSuccessful)
+                    val user = auth.currentUser
+
+                    if (user != null) {
+                        val userId = user.uid
+                        val userRef = FirebaseFirestore.getInstance().collection("users").document(userId)
+
+                        val userData = hashMapOf(
+                            "name" to name,
+                            "lastName" to lastName,
+                            "email" to email,
+                            "identification" to identification,
+                            "latitude" to latitude,
+                            "longitude" to longitude
+                        )
+
+                        userRef.set(userData)
+                            .addOnSuccessListener {
+                                Log.d(TAG, "User data saved successfully.")
+                            }
+                            .addOnFailureListener { e ->
+                                Log.w(TAG, "Error saving user data", e)
+                            }
+                    }
+
+                    val intent = Intent(this, LogIn::class.java)
+                    startActivity(intent)
+                    finish()
+                } else {
+                    Toast.makeText(this, "createUserWithEmail:Failure: " + task.exception.toString(),
+                        Toast.LENGTH_SHORT).show()
+                    task.exception?.message?.let { Log.e(TAG, it) }
+                }
+            }
     }
 }

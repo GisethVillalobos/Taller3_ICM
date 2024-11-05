@@ -1,4 +1,4 @@
-package com.example.taller3
+package com.example.taller3.Logica
 
 import android.content.Intent
 import android.os.Bundle
@@ -9,12 +9,22 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import com.example.taller3.R
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 
-class UsuarioDetalles : AppCompatActivity() {
+class ListaUsuarios : AppCompatActivity() {
+
+    private lateinit var auth: FirebaseAuth
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_usuario_detalles)
+        setContentView(R.layout.activity_lista_usuarios)
+
+        // Firebase
+        auth = Firebase.auth
 
         // Setting the space for the menu
         val toolbar: Toolbar = findViewById(R.id.toolbar)
@@ -30,7 +40,7 @@ class UsuarioDetalles : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.menuLogOut -> {
-                // auth.signOut()
+                auth.signOut()
                 val intent = Intent(this, LogIn::class.java)
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 startActivity(intent)
