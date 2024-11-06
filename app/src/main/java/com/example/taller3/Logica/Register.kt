@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ContentValues.TAG
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -19,18 +20,25 @@ import com.example.taller3.Datos.User
 import com.example.taller3.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 
 class Register : AppCompatActivity() {
 
     companion object {
         private const val CAMERA_PERMISSION_CODE = 100
         private const val STORAGE_PERMISSION_CODE = 101
+        private const val LOCATION_PERMISSION_CODE = 102
         private const val IMAGE_PICK_CODE = 1000
+        private const val PATH_USERS = "users/"
     }
 
     private lateinit var auth: FirebaseAuth
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     private lateinit var editTextName: EditText
     private lateinit var editTextLastName: EditText
@@ -43,11 +51,15 @@ class Register : AppCompatActivity() {
 
     private var selectedImageUri: Uri? = null
 
+    private val database = FirebaseDatabase.getInstance()
+    private lateinit var myRef: DatabaseReference
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register)
 
         auth = Firebase.auth
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         editTextName = findViewById(R.id.editTextName)
         editTextLastName = findViewById(R.id.editTextLastName)
@@ -70,12 +82,19 @@ class Register : AppCompatActivity() {
     private fun checkPermissionsAndSelectImage() {
         val cameraPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
         val storagePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+        val locationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
 
         if (cameraPermission != PackageManager.PERMISSION_GRANTED || storagePermission != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.CAMERA, Manifest.permission.READ_EXTERNAL_STORAGE),
                 STORAGE_PERMISSION_CODE
+            )
+        } else if (locationPermission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_CODE
             )
         } else {
             selectImage()
@@ -102,11 +121,20 @@ class Register : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == STORAGE_PERMISSION_CODE) {
-            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                selectImage()
-            } else {
-                Toast.makeText(this, "Permisos de cámara y almacenamiento denegados", Toast.LENGTH_SHORT).show()
+        when (requestCode) {
+            STORAGE_PERMISSION_CODE -> {
+                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    selectImage()
+                } else {
+                    Toast.makeText(this, "Permisos de cámara y almacenamiento denegados", Toast.LENGTH_SHORT).show()
+                }
+            }
+            LOCATION_PERMISSION_CODE -> {
+                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    getLocationAndRegister()
+                } else {
+                    Toast.makeText(this, "Permiso de ubicación denegado", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -123,22 +151,42 @@ class Register : AppCompatActivity() {
             return
         }
 
-        // Lógica para manejar el registro de usuario aquí
-        registerUser(name, lastName, email, password, identification)
-
-        Toast.makeText(this, "Usuario registrado", Toast.LENGTH_SHORT).show()
-        val intent = Intent(this, LogIn::class.java)
-        startActivity(intent)
+        // Get location if permission is granted
+        getLocationAndRegister()
     }
 
-    private fun registerUser(name: String,
-                             lastName: String,
-                             email: String,
-                             password: String,
-                             identification: String) {
+    private fun getLocationAndRegister() {
+        // Check if we have location permission
+        val locationPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
 
-        val latitude: Double = 0.0
-        val longitude: Double = 0.0
+        if (locationPermission == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                if (location != null) {
+                    val latitude = location.latitude
+                    val longitude = location.longitude
+                    registerUser(latitude, longitude)
+                } else {
+                    // Fallback if location is null
+                    Toast.makeText(this, "No se pudo obtener la ubicación", Toast.LENGTH_SHORT).show()
+                    registerUser(0.0, 0.0)  // Fallback to default values
+                }
+            }
+        } else {
+            // If permission is not granted, request it
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_CODE
+            )
+        }
+    }
+
+    private fun registerUser(latitude: Double, longitude: Double) {
+        val name = editTextName.text.toString()
+        val lastName = editTextLastName.text.toString()
+        val email = editTextEmail.text.toString()
+        val password = editTextPassword.text.toString()
+        val identification = editTextIdentification.text.toString()
 
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
@@ -148,23 +196,18 @@ class Register : AppCompatActivity() {
 
                     if (user != null) {
                         val userId = user.uid
-                        val userRef = FirebaseFirestore.getInstance().collection("users").document(userId)
+                        val userData = User()
+                        userData.userId = userId
+                        userData.nombre = name
+                        userData.apellido = lastName
+                        userData.identificacion = identification
+                        userData.latitud = latitude
+                        userData.longitud = longitude
 
-                        val userData = User(
-                            userId,
-                            name,
-                            lastName,
-                            identification,
-                            latitude,
-                            longitude
-                        )
-
-                        userRef.set(userData)
+                        myRef = database.getReference(PATH_USERS + auth.currentUser!!.uid)
+                        myRef.setValue(userData)
                             .addOnSuccessListener {
                                 Log.d(TAG, "User data saved successfully.")
-                            }
-                            .addOnFailureListener { e ->
-                                Log.w(TAG, "Error saving user data", e)
                             }
                     }
 
