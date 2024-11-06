@@ -15,16 +15,12 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.taller3.Datos.User
 import com.example.taller3.R
-import com.google.android.gms.tasks.OnFailureListener
-import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
-import com.google.firebase.storage.UploadTask
-import java.io.File
 
 class Register : AppCompatActivity() {
 
@@ -154,13 +150,13 @@ class Register : AppCompatActivity() {
                         val userId = user.uid
                         val userRef = FirebaseFirestore.getInstance().collection("users").document(userId)
 
-                        val userData = hashMapOf(
-                            "name" to name,
-                            "lastName" to lastName,
-                            "email" to email,
-                            "identification" to identification,
-                            "latitude" to latitude,
-                            "longitude" to longitude
+                        val userData = User(
+                            userId,
+                            name,
+                            lastName,
+                            identification,
+                            latitude,
+                            longitude
                         )
 
                         userRef.set(userData)
